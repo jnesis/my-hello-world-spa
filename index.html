@@ -1,7 +1,119 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hello World – Token Inspector</title>
+  <style>
+    body { font-family: sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: 0.25rem; }
+    pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 4px; padding: 1rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 0.4rem 0.75rem; border: 1px solid #ccc; }
+    th { background: #e8e8e8; }
+    tr:nth-child(even) td { background: #f9f9f9; }
+    .error { color: #c00; }
+    .section { margin-top: 2rem; }
+  </style>
+</head>
 <body>
   <h1>Hello, World!</h1>
-  <p>My POC is running on Azure Static Web Apps.</p>
+  <p>My POC is running on Azure App Service.</p>
+
+  <div class="section">
+    <h2>Access Token Claims</h2>
+    <div id="output">Loading…</div>
+  </div>
+
+  <div class="section">
+    <h2>Raw Token Payload</h2>
+    <pre id="raw">—</pre>
+  </div>
+
+  <script>
+    /**
+     * Decodes the payload of a JWT without verifying the signature.
+     * Verification must be done server-side; this is display-only.
+     */
+    function decodeJwtPayload(token) {
+      const parts = token.split('.');
+      if (parts.length !== 3) throw new Error('Not a valid JWT (expected 3 parts).');
+      // Base64url → Base64 → decode
+      const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const json = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))
+          .join('')
+      );
+      return JSON.parse(json);
+    }
+
+    function renderClaims(claims) {
+      const rows = Object.entries(claims).map(([key, value]) => {
+        let display = value;
+
+        // Human-readable timestamps for epoch claims
+        if ((key === 'exp' || key === 'iat' || key === 'nbf') && typeof value === 'number') {
+          display = `${value}  (${new Date(value * 1000).toISOString()})`;
+        } else if (Array.isArray(value)) {
+          display = value.join(', ');
+        } else if (typeof value === 'object') {
+          display = JSON.stringify(value);
+        }
+
+        return `<tr><td><strong>${escapeHtml(key)}</strong></td><td>${escapeHtml(String(display))}</td></tr>`;
+      }).join('');
+
+      return `<table><thead><tr><th>Claim</th><th>Value</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    async function loadTokenDetails() {
+      const outputEl = document.getElementById('output');
+      const rawEl    = document.getElementById('raw');
+
+      try {
+        // Azure App Service Easy Auth endpoint – exposes the forwarded token and claims.
+        const response = await fetch('/.auth/me', { credentials: 'include' });
+
+        if (!response.ok) {
+          throw new Error(`/.auth/me returned HTTP ${response.status}. Ensure Azure App Service Authentication (Easy Auth) is enabled.`);
+        }
+
+        const data = await response.json();
+
+        if (!Array.isArray(data) || data.length === 0) {
+          throw new Error('No authentication data returned from /.auth/me. The user may not be authenticated.');
+        }
+
+        const entry = data[0];
+
+        // Prefer access_token; fall back to id_token
+        const rawToken = entry.access_token || entry.id_token;
+
+        if (!rawToken) {
+          // No JWT available – display the user_claims array directly
+          outputEl.innerHTML = '<p>No access_token or id_token in /.auth/me response. Showing raw user_claims:</p>' +
+            `<pre>${escapeHtml(JSON.stringify(entry.user_claims, null, 2))}</pre>`;
+          rawEl.textContent = JSON.stringify(entry, null, 2);
+          return;
+        }
+
+        const claims = decodeJwtPayload(rawToken);
+        outputEl.innerHTML = renderClaims(claims);
+        rawEl.textContent  = JSON.stringify(claims, null, 2);
+
+      } catch (err) {
+        outputEl.innerHTML = `<p class="error">Error: ${escapeHtml(err.message)}</p>`;
+        console.error(err);
+      }
+    }
+
+    loadTokenDetails();
+  </script>
 </body>
 </html>
