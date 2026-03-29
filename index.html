@@ -97,7 +97,7 @@
 
         if (!rawToken) {
           // No JWT available – display the user_claims array directly
-          outputEl.innerHTML = '<p>No access_token or id_token in /.auth/login/aad response. Showing raw user_claims:</p>' +
+          outputEl.innerHTML = '<p>No access_token or id_token in /.auth/me response. Showing raw user_claims:</p>' +
             `<pre>${escapeHtml(JSON.stringify(entry.user_claims, null, 2))}</pre>`;
           rawEl.textContent = JSON.stringify(entry, null, 2);
           return;
