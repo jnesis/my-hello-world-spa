@@ -78,7 +78,8 @@
 
       try {
         // Azure App Service Easy Auth endpoint – exposes the forwarded token and claims.
-        const response = await fetch('/.auth/me', { credentials: 'include' });
+        //const response = await fetch('/.auth/me', { credentials: 'include' });
+        const response = await fetch('/.auth/login/aad', { credentials: 'include' });
 
         if (!response.ok) {
           throw new Error(`/.auth/me returned HTTP ${response.status}. Ensure Azure App Service Authentication (Easy Auth) is enabled.`);
@@ -97,7 +98,7 @@
 
         if (!rawToken) {
           // No JWT available – display the user_claims array directly
-          outputEl.innerHTML = '<p>No access_token or id_token in /.auth/me response. Showing raw user_claims:</p>' +
+          outputEl.innerHTML = '<p>No access_token or id_token in /.auth/login/aad response. Showing raw user_claims:</p>' +
             `<pre>${escapeHtml(JSON.stringify(entry.user_claims, null, 2))}</pre>`;
           rawEl.textContent = JSON.stringify(entry, null, 2);
           return;
