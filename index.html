@@ -82,7 +82,7 @@
         const response = await fetch('/.auth/login/aad', { credentials: 'include' });
 
         if (!response.ok) {
-          throw new Error(`/.auth/me returned HTTP ${response.status}. Ensure Azure App Service Authentication (Easy Auth) is enabled.`);
+          throw new Error(`/.auth/login/aad returned HTTP ${response.status}. Ensure Azure App Service Authentication (Easy Auth) is enabled.`);
         }
 
         const data = await response.json();
