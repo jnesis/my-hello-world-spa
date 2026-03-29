@@ -78,11 +78,10 @@
 
       try {
         // Azure App Service Easy Auth endpoint – exposes the forwarded token and claims.
-        //const response = await fetch('/.auth/me', { credentials: 'include' });
-        const response = await fetch('/.auth/login/aad', { credentials: 'include' });
+        const response = await fetch('/.auth/me', { credentials: 'include' });
 
         if (!response.ok) {
-          throw new Error(`/.auth/login/aad returned HTTP ${response.status}. Ensure Azure App Service Authentication (Easy Auth) is enabled.`);
+          throw new Error(`/.auth/me returned HTTP ${response.status}. Ensure Azure App Service Authentication (Easy Auth) is enabled.`);
         }
 
         const data = await response.json();
